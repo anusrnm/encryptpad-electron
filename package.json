@@ -1,0 +1,22 @@
+{
+  "name": "encryptpad-electron",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "description": "Minimal EncryptPad-like app using Electron (ESM), local CodeMirror editor, and OpenPGP password encryption.",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "dependencies": {
+    "openpgp": "^5",
+    "electron-store": "^9",
+    "codemirror": "^5"
+  },
+  "devDependencies": {
+    "electron": "^31"
+  }
+}
