@@ -94,15 +94,20 @@ main { height: calc(100% - 56px - 28px); }
 }
 
 .statusbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: .2rem .6rem;
-  border-top: 1px solid var(--bord);
-  background: var(--bg);
-  color: var(--muted);
-  font-size: .85rem;
-  height: 28px;
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:var(--status-h);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 .6rem;
+  border-top:1px solid var(--bord);
+  background: color-mix(in oklab, var(--bg), black 3%);
+  color:var(--muted);
+  font-size:.85rem;
+  z-index:20;
 }
 
 /* Settings dialog */
