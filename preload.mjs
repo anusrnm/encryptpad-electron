@@ -53,7 +53,7 @@ contextBridge.exposeInMainWorld('api', {
   setSettings: (partial) => ipcRenderer.invoke('settings:set', partial),
   // Menu-driven actions & lifecycle
   onAction: (cb) => {
-    ['new','open','save','saveAs','encrypt','decrypt','settings'].forEach(key=>{
+    ['new','open','save','saveAs','settings'].forEach(key=>{
       ipcRenderer.removeAllListeners(`action:${key}`);
       ipcRenderer.on(`action:${key}`, () => cb(key));
     });

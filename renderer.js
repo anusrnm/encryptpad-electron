@@ -71,54 +71,37 @@ async function doNew() {
 async function doOpen() {
   const res = await window.api.openFile();
   if (res?.canceled) return;
+  const passphrase = await askPassphrase("Enter passphrase to decrypt (leave blank if plain text):");
+  if (passphrase) {
+    try {
+      const plain = await window.api.decryptText(res.content, passphrase);
+      res.content = plain;
+    } catch (e) {
+      alert('Decryption failed: ' + e.message + '\nMake sure the passphrase is correct and content is PGP armored.');
+      return;
+    }
+  }
   cm.setValue(res.content);
   currentPath = res.filePath;
   setDirty(false);
 }
 
 async function doSave(as = false) {
-  const content = cm.getValue();
+  let content = cm.getValue();
+  const passphrase = await askPassphrase("Enter passphrase to encrypt (leave blank for plain text):");
+  if (passphrase) {
+    try {
+      content = await window.api.encryptText(content, passphrase, settings.crypto);
+    } catch (e) {
+      alert("Encryption failed: " + e.message);
+      return;
+    }
+  }
   const res = await window.api.saveFile({ content, filePath: as ? null : currentPath });
   if (res?.canceled) return;
   currentPath = res.filePath;
   setDirty(false);
 }
-
-async function doEncrypt() {
-  const text = cm.getValue();
-  const pwd = pass.value;
-  if (!pwd) { alert('Enter a passphrase'); return; }
-  try {
-    const armored = await window.api.encryptText(text, pwd, settings.crypto);
-    cm.setValue(armored);
-    setDirty(true);
-  } catch (e) {
-    console.error(e);
-    alert('Encryption failed: ' + e.message);
-  }
-}
-
-async function doDecrypt() {
-  const armored = cm.getValue();
-  const pwd = pass.value;
-  if (!pwd) { alert('Enter a passphrase'); return; }
-  try {
-    const plain = await window.api.decryptText(armored, pwd);
-    cm.setValue(plain);
-    setDirty(true);
-  } catch (e) {
-    console.error(e);
-    alert('Decryption failed: ' + e.message + '\nMake sure the passphrase is correct and content is PGP armored.');
-  }
-}
-
-// Wire toolbar buttons
-document.getElementById('btn-new').addEventListener('click', () => doNew());
-document.getElementById('btn-open').addEventListener('click', () => doOpen());
-document.getElementById('btn-save').addEventListener('click', () => doSave(false));
-document.getElementById('btn-saveas').addEventListener('click', () => doSave(true));
-document.getElementById('btn-encrypt').addEventListener('click', () => doEncrypt());
-document.getElementById('btn-decrypt').addEventListener('click', () => doDecrypt());
 
 // Menu accelerator events
 window.api.onAction((key) => {
@@ -126,8 +109,6 @@ window.api.onAction((key) => {
   if (key === 'open') doOpen();
   if (key === 'save') doSave(false);
   if (key === 'saveAs') doSave(true);
-  if (key === 'encrypt') doEncrypt();
-  if (key === 'decrypt') doDecrypt();
   if (key === 'settings') openSettings();
 });
 
@@ -140,9 +121,6 @@ window.api.onRequestClose(async () => {
     window.api.confirmClose(true);
   }
 });
-
-// Settings modal
-document.getElementById('btn-settings').addEventListener('click', () => openSettings());
 
 function openSettings() {
   // populate form
@@ -189,6 +167,29 @@ btnCancel.addEventListener('click', (e) => {
 btnSave.addEventListener('click', (e) => {
   settingsDialog.close("save");
 });
+
+async function askPassphrase(title) {
+  return new Promise((resolve) => {
+    const dlg = document.getElementById('passphraseDialog');
+    const form = document.getElementById('passphraseForm');
+    const input = document.getElementById('passphraseInput');
+    document.getElementById('passphraseTitle').textContent = title;
+    input.value = '';
+
+
+    function cleanup() {
+      dlg.removeEventListener('close', onClose);
+    }
+    function onClose() {
+      cleanup();
+      resolve(dlg.returnValue === 'ok' ? input.value : null);
+    }
+
+
+    dlg.addEventListener('close', onClose);
+    dlg.showModal();
+  });
+}
 
 // Initial status
 setDirty(false);

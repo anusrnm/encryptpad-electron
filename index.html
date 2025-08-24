@@ -4,7 +4,8 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;">
 
   <title>EncryptPad</title>
   <link rel="stylesheet" href="./node_modules/codemirror/lib/codemirror.css">
@@ -12,23 +13,6 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <header class="toolbar">
-    <div class="left">
-      <button id="btn-new" title="New (Ctrl/Cmd+N)" class="btn">New</button>
-      <button id="btn-open" title="Open (Ctrl/Cmd+O)" class="btn">Open</button>
-      <button id="btn-save" title="Save (Ctrl/Cmd+S)" class="btn">Save</button>
-      <button id="btn-saveas" title="Save As (Ctrl/Cmd+Shift+S)" class="btn hide-sm">Save As</button>
-    </div>
-    <div class="middle">
-      <input type="password" id="pass" placeholder="Passphrase" aria-label="Passphrase" />
-      <button id="btn-encrypt" title="Encrypt (Ctrl/Cmd+E)" class="btn primary">Encrypt</button>
-      <button id="btn-decrypt" title="Decrypt (Ctrl/Cmd+D)" class="btn">Decrypt</button>
-    </div>
-    <div class="right">
-      <button id="btn-settings" title="Settings (Ctrl/Cmd+,)" class="btn icon">⚙️</button>
-    </div>
-  </header>
-
   <main>
     <textarea id="editor"></textarea>
   </main>
@@ -37,6 +21,17 @@
     <div id="sb-left">Ready</div>
     <div id="sb-right">UTF-8 | --:--</div>
   </footer>
+
+  <dialog id="passphraseDialog">
+    <form method="dialog" id="passphraseForm">
+      <h3 id="passphraseTitle">Enter Passphrase</h3>
+      <input type="password" id="passphraseInput" placeholder="Passphrase" required />
+      <menu>
+        <button value="cancel" class="btn">Cancel</button>
+        <button value="ok" class="btn primary">OK</button>
+      </menu>
+    </form>
+  </dialog>
 
   <!-- Settings Modal -->
   <dialog id="settingsDialog">
