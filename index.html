@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="system">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <title>EncryptPad (Electron)</title>
   <link rel="stylesheet" href="./node_modules/codemirror/lib/codemirror.css">
   <link rel="stylesheet" href="./node_modules/codemirror/theme/neo.css">
@@ -12,24 +12,91 @@
 <body>
   <header class="toolbar">
     <div class="left">
-      <button id="btn-new" title="New (Ctrl/Cmd+N)">New</button>
-      <button id="btn-open" title="Open (Ctrl/Cmd+O)">Open</button>
-      <button id="btn-save" title="Save (Ctrl/Cmd+S)">Save</button>
-      <button id="btn-saveas" title="Save As (Ctrl/Cmd+Shift+S)">Save As</button>
+      <button id="btn-new" title="New (Ctrl/Cmd+N)" class="btn">New</button>
+      <button id="btn-open" title="Open (Ctrl/Cmd+O)" class="btn">Open</button>
+      <button id="btn-save" title="Save (Ctrl/Cmd+S)" class="btn">Save</button>
+      <button id="btn-saveas" title="Save As (Ctrl/Cmd+Shift+S)" class="btn hide-sm">Save As</button>
     </div>
     <div class="middle">
       <input type="password" id="pass" placeholder="Passphrase" aria-label="Passphrase" />
-      <button id="btn-encrypt" title="Encrypt (Ctrl/Cmd+E)">Encrypt</button>
-      <button id="btn-decrypt" title="Decrypt (Ctrl/Cmd+D)">Decrypt</button>
+      <button id="btn-encrypt" title="Encrypt (Ctrl/Cmd+E)" class="btn primary">Encrypt</button>
+      <button id="btn-decrypt" title="Decrypt (Ctrl/Cmd+D)" class="btn">Decrypt</button>
     </div>
     <div class="right">
-      <span id="status">Ready</span>
+      <button id="btn-settings" title="Settings (Ctrl/Cmd+,)" class="btn icon">⚙️</button>
     </div>
   </header>
 
   <main>
     <textarea id="editor"></textarea>
   </main>
+
+  <footer class="statusbar" id="statusbar">
+    <div id="sb-left">Ready</div>
+    <div id="sb-right">UTF-8 | --:--</div>
+  </footer>
+
+  <!-- Settings Modal -->
+  <dialog id="settingsDialog">
+    <form method="dialog" id="settingsForm">
+      <h3>Settings</h3>
+      <section class="grid">
+        <label>Theme
+          <select name="theme">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+
+        <label>Font family
+          <select name="fontFamily">
+            <option value="system-ui">System UI</option>
+            <option value="ui-monospace">Monospace</option>
+          </select>
+        </label>
+
+        <label>Font size
+          <input name="fontSize" type="number" min="12" max="24" step="1" />
+        </label>
+      </section>
+
+      <h4>Crypto</h4>
+      <section class="grid">
+        <label>Symmetric
+          <select name="symmetric">
+            <option value="aes256">AES-256</option>
+            <option value="aes192">AES-192</option>
+            <option value="aes128">AES-128</option>
+          </select>
+        </label>
+
+        <label>Compression
+          <select name="compression">
+            <option value="zlib">zlib</option>
+            <option value="zip">zip</option>
+            <option value="uncompressed">uncompressed</option>
+          </select>
+        </label>
+
+        <label>AEAD protect
+          <select name="aead">
+            <option value="true">enabled</option>
+            <option value="false">disabled</option>
+          </select>
+        </label>
+
+        <label>S2K iterations
+          <input name="s2kIterationCount" type="number" min="1024" max="1048576" step="1024" />
+        </label>
+      </section>
+
+      <menu>
+        <button value="cancel" class="btn">Cancel</button>
+        <button value="save" class="btn primary">Save</button>
+      </menu>
+    </form>
+  </dialog>
 
   <script src="./node_modules/codemirror/lib/codemirror.js"></script>
   <script src="./node_modules/codemirror/mode/markdown/markdown.js"></script>
