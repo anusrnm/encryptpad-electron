@@ -1,7 +1,10 @@
 /* global CodeMirror */
 const editorElem = document.getElementById('editor');
-const status = document.getElementById('status');
+const sbLeft = document.getElementById('sb-left');
+const sbRight = document.getElementById('sb-right');
 const pass = document.getElementById('pass');
+const settingsDialog = document.getElementById('settingsDialog');
+const settingsForm = document.getElementById('settingsForm');
 
 const cm = CodeMirror.fromTextArea(editorElem, {
   mode: 'markdown',
@@ -12,21 +15,46 @@ const cm = CodeMirror.fromTextArea(editorElem, {
 
 let currentPath = null;
 let dirty = false;
+let settings = await window.api.getSettings();
 
-function setStatus(text) { status.textContent = text; }
+function updateThemeVars() {
+  const root = document.documentElement;
+  const theme = settings.theme || 'system';
+  root.setAttribute('data-theme', theme);
+  if (theme === 'system') root.setAttribute('data-theme', 'system'); // defer to media
+  root.style.setProperty('--editor-font-size', `${settings.fontSize || 15}px`);
+  root.style.setProperty('--editor-font-family', settings.fontFamily === 'ui-monospace' ? 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' : 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto');
+}
+updateThemeVars();
 
 function setDirty(flag) {
   dirty = flag;
   document.title = `EncryptPad${dirty ? ' *' : ''}${currentPath ? ' — ' + currentPath : ''}`;
+  refreshStatusBar();
 }
 
+function refreshStatusBar() {
+  const doc = cm.getDoc();
+  const cursor = doc.getCursor();
+  const line = cursor.line + 1;
+  const col = cursor.ch + 1;
+  const text = doc.getValue();
+  const words = (text.trim().match(/\S+/g) || []).length;
+  const crypto = settings.crypto || {};
+  const cryptoStr = `${crypto.symmetric?.toUpperCase() || 'AES256'}${crypto.aead ? '+AEAD' : ''}/${(crypto.compression||'zlib')}`;
+  sbLeft.textContent = `${currentPath || 'Untitled'} ${dirty ? '(modified)' : ''}`.trim();
+  sbRight.textContent = `Ln ${line}, Col ${col} | ${words} words | UTF-8 | ${cryptoStr}`;
+}
+
+cm.on('cursorActivity', refreshStatusBar);
 cm.on('change', () => setDirty(true));
 
-async function applySystemTheme() {
+// System theme hint (for system mode only)
+async function applySystemThemeHint() {
   const { shouldUseDarkColors } = await window.api.getTheme();
-  cm.setOption('theme', shouldUseDarkColors ? 'neo' : 'neo'); // same theme but colors follow CSS vars
+  // we keep 'neo' theme but CSS vars swap colors; nothing else needed
 }
-applySystemTheme();
+applySystemThemeHint();
 
 // Actions
 async function doNew() {
@@ -34,7 +62,6 @@ async function doNew() {
   cm.setValue('');
   currentPath = null;
   setDirty(false);
-  setStatus('New document');
 }
 
 async function doOpen() {
@@ -43,7 +70,6 @@ async function doOpen() {
   cm.setValue(res.content);
   currentPath = res.filePath;
   setDirty(false);
-  setStatus(`Opened: ${res.filePath}`);
 }
 
 async function doSave(as = false) {
@@ -52,23 +78,19 @@ async function doSave(as = false) {
   if (res?.canceled) return;
   currentPath = res.filePath;
   setDirty(false);
-  setStatus(`Saved: ${res.filePath}`);
 }
 
 async function doEncrypt() {
   const text = cm.getValue();
   const pwd = pass.value;
   if (!pwd) { alert('Enter a passphrase'); return; }
-  setStatus('Encrypting…');
   try {
-    const armored = await window.api.encryptText(text, pwd);
+    const armored = await window.api.encryptText(text, pwd, settings.crypto);
     cm.setValue(armored);
     setDirty(true);
-    setStatus('Encrypted (ASCII armored). Consider saving as .asc');
   } catch (e) {
     console.error(e);
     alert('Encryption failed: ' + e.message);
-    setStatus('Encryption failed');
   }
 }
 
@@ -76,16 +98,13 @@ async function doDecrypt() {
   const armored = cm.getValue();
   const pwd = pass.value;
   if (!pwd) { alert('Enter a passphrase'); return; }
-  setStatus('Decrypting…');
   try {
     const plain = await window.api.decryptText(armored, pwd);
     cm.setValue(plain);
     setDirty(true);
-    setStatus('Decrypted');
   } catch (e) {
     console.error(e);
     alert('Decryption failed: ' + e.message + '\nMake sure the passphrase is correct and content is PGP armored.');
-    setStatus('Decryption failed');
   }
 }
 
@@ -105,11 +124,59 @@ window.api.onAction((key) => {
   if (key === 'saveAs') doSave(true);
   if (key === 'encrypt') doEncrypt();
   if (key === 'decrypt') doDecrypt();
+  if (key === 'settings') openSettings();
 });
 
-// Warn on close if dirty
-window.addEventListener('beforeunload', (e) => {
-  if (!dirty) return;
-  e.preventDefault();
-  e.returnValue = '';
+// Safe-close handshake to avoid "won't exit" issues
+window.api.onRequestClose(async () => {
+  if (dirty) {
+    const ok = confirm('You have unsaved changes. Quit anyway?');
+    window.api.confirmClose(ok);
+  } else {
+    window.api.confirmClose(true);
+  }
 });
+
+// Settings modal
+document.getElementById('btn-settings').addEventListener('click', () => openSettings());
+
+function openSettings() {
+  // populate form
+  settingsForm.theme.value = settings.theme || 'system';
+  settingsForm.fontFamily.value = settings.fontFamily || 'system-ui';
+  settingsForm.fontSize.value = settings.fontSize || 15;
+  settingsForm.symmetric.value = settings.crypto?.symmetric || 'aes256';
+  settingsForm.compression.value = settings.crypto?.compression || 'zlib';
+  settingsForm.aead.value = String(settings.crypto?.aead ?? true);
+  settingsForm.s2kIterationCount.value = settings.crypto?.s2kIterationCount ?? 65536;
+  settingsDialog.showModal();
+}
+
+settingsForm.addEventListener('close', async (e) => {
+  // no-op: dialog 'close' doesn't fire reliably for <form method="dialog">
+});
+
+settingsForm.addEventListener('submit', (e) => e.preventDefault());
+
+settingsDialog.addEventListener('close', async () => {
+  if (settingsDialog.returnValue !== 'save') return;
+  const form = new FormData(settingsForm);
+  const next = {
+    theme: form.get('theme'),
+    fontFamily: form.get('fontFamily'),
+    fontSize: Number(form.get('fontSize')) || 15,
+    crypto: {
+      symmetric: form.get('symmetric'),
+      compression: form.get('compression'),
+      aead: form.get('aead') === 'true',
+      s2kIterationCount: Number(form.get('s2kIterationCount')) || 65536
+    }
+  };
+  settings = await window.api.setSettings(next);
+  updateThemeVars();
+  cm.refresh();
+  refreshStatusBar();
+});
+
+// Initial status
+setDirty(false);

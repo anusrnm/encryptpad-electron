@@ -1,19 +1,21 @@
 # EncryptPad (Electron, ESM)
 
-A minimal, offline-first, EncryptPad-like editor using **Electron (ES Modules)**, **local CodeMirror** as the text editor, and **OpenPGP.js (latest v5.x)** for password-based encryption/decryption.
+A minimal, offline-first, EncryptPad-like editor using **Electron (ES Modules)**, **local CodeMirror** as the text editor, and **OpenPGP.js (v5)** for password-based encryption/decryption.
 
-## Features
-- Electron app using ESM (`type: "module"`)
-- Local CodeMirror (no CDN) for editing (Markdown mode enabled)
-- Password-based symmetric encryption/decryption with OpenPGP (ASCII-armored)
-- Follows **system light/dark theme** via `prefers-color-scheme`
-- Handy keyboard shortcuts:
-  - **New**: `Ctrl/Cmd + N`
-  - **Open**: `Ctrl/Cmd + O`
-  - **Save**: `Ctrl/Cmd + S`
-  - **Save As**: `Ctrl/Cmd + Shift + S`
-  - **Encrypt**: `Ctrl/Cmd + E`
-  - **Decrypt**: `Ctrl/Cmd + D`
+## What's new
+- **Exit fix**: safe close/quit handshake so the app exits cleanly even after opening a file, while still warning about unsaved changes.
+- **Settings** (`Ctrl/Cmd+,`): theme (System/Light/Dark), font family/size, and crypto options (AES-128/192/256, AEAD on/off, zlib/zip/none, S2K iterations).
+- **Status bar**: file name, modified flag, line/column, word count, encoding, and crypto selections.
+- **Responsive UI**: mobile-friendly controls (44px targets), compact toolbar on narrow windows.
+
+## Shortcuts
+- New: `Ctrl/Cmd + N`
+- Open: `Ctrl/Cmd + O`
+- Save: `Ctrl/Cmd + S`
+- Save As: `Ctrl/Cmd + Shift + S`
+- Encrypt: `Ctrl/Cmd + E`
+- Decrypt: `Ctrl/Cmd + D`
+- Settings: `Ctrl/Cmd + ,`
 
 ## Quick Start
 
@@ -22,14 +24,6 @@ npm install
 npm start
 ```
 
-> Tip: In development, the renderer loads CodeMirror files from `./node_modules/codemirror/...` using `file://` paths. This keeps everything local without a separate bundler.
-
-## Notes
-
-- **OpenPGP** is imported in the **preload** (Node/Electron side) and exposed to the renderer through a safe API, keeping the renderer code simple and avoiding bare imports in the browser context.
-- This project follows the **system theme** automatically. The CodeMirror theme is `neo`, with colors adapting via CSS variables.
-- Saving encrypted content will typically produce an armored block (e.g. save as `.asc`). Decryption expects a valid ASCII-armored PGP message and the correct passphrase.
-- For packaging/production, consider using a bundler and copying assets instead of referencing `node_modules` directly.
-
-## License
-MIT
+## Crypto notes
+- Uses OpenPGP symmetric encryption (password-based). You can tweak symmetric algorithm, compression, enable AEAD protection, and adjust S2K iteration count under **Settings**.
+- Encrypted output is ASCII-armored; you can save as `.asc`. Decrypt expects valid armored data and the correct passphrase.

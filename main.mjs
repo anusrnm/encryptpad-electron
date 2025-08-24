@@ -1,10 +1,25 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu, nativeTheme } from 'electron';
+import Store from 'electron-store';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import url from 'node:url';
 
-let mainWindow;
+const store = new Store({
+  name: 'settings',
+  defaults: {
+    theme: 'system', // 'system' | 'light' | 'dark'
+    fontFamily: 'system-ui',
+    fontSize: 15,
+    crypto: {
+      symmetric: 'aes256', // 'aes256' | 'aes192' | 'aes128'
+      aead: true,
+      compression: 'zlib', // 'zlib' | 'zip' | 'uncompressed'
+      s2kIterationCount: 65536
+    }
+  }
+});
 
+let mainWindow;
 const isMac = process.platform === 'darwin';
 
 async function createWindow() {
@@ -17,6 +32,22 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
+    }
+  });
+
+  // Handle safe-close with unsaved check
+  let isTryingToClose = false;
+  mainWindow.on('close', (e) => {
+    if (isTryingToClose) return; // already confirmed
+    e.preventDefault();
+    mainWindow.webContents.send('app:request-close');
+  });
+  ipcMain.on('app:confirm-close', (_, ok) => {
+    if (ok) {
+      isTryingToClose = true;
+      // remove listeners to avoid loops
+      mainWindow.removeAllListeners('close');
+      mainWindow.close();
     }
   });
 
@@ -67,13 +98,6 @@ async function createWindow() {
       ]
     },
     {
-      label: 'Crypto',
-      submenu: [
-        { label: 'Encrypt', accelerator: 'CmdOrCtrl+E', click: () => mainWindow.webContents.send('action:encrypt') },
-        { label: 'Decrypt', accelerator: 'CmdOrCtrl+D', click: () => mainWindow.webContents.send('action:decrypt') },
-      ]
-    },
-    {
       label: 'View',
       submenu: [
         { role: 'reload' }, { role: 'forceReload' }, { role: 'toggleDevTools' },
@@ -84,19 +108,17 @@ async function createWindow() {
       ]
     },
     {
-      role: 'window',
-      submenu: [{ role: 'minimize' }, { role: 'zoom' }]
+      label: 'Crypto',
+      submenu: [
+        { label: 'Encrypt', accelerator: 'CmdOrCtrl+E', click: () => mainWindow.webContents.send('action:encrypt') },
+        { label: 'Decrypt', accelerator: 'CmdOrCtrl+D', click: () => mainWindow.webContents.send('action:decrypt') },
+        { type: 'separator' },
+        { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: () => mainWindow.webContents.send('action:settings') }
+      ]
     },
     {
-      role: 'help',
-      submenu: [
-        {
-          label: 'Learn More',
-          click: async () => {
-            await import('node:child_process').then(({ exec }) => exec(process.platform === 'win32' ? 'start https://www.electronjs.org' : process.platform === 'darwin' ? 'open https://www.electronjs.org' : 'xdg-open https://www.electronjs.org'));
-          }
-        }
-      ]
+      role: 'window',
+      submenu: [{ role: 'minimize' }, { role: 'zoom' }]
     }
   ];
 
@@ -136,8 +158,16 @@ ipcMain.handle('file:save', async (_, { content, filePath }) => {
   return { canceled: false, filePath: target };
 });
 
+// Theme helpers
 ipcMain.handle('app:theme', () => {
   return { shouldUseDarkColors: nativeTheme.shouldUseDarkColors };
+});
+
+// Settings: get/set
+ipcMain.handle('settings:get', () => store.store);
+ipcMain.handle('settings:set', (_, partial) => {
+  store.set(partial);
+  return store.store;
 });
 
 app.whenReady().then(createWindow);
