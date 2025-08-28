@@ -9,7 +9,7 @@ const store = new Store({
   defaults: {
     theme: 'system', // 'system' | 'light' | 'dark'
     fontFamily: 'system-ui',
-    fontSize: 15,
+    fontSize: 12,
     crypto: {
       symmetric: 'aes256', // 'aes256' | 'aes192' | 'aes128'
       aead: true,
@@ -26,7 +26,7 @@ async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 800,
-    show: false,
+    autoHideMenuBar: false,
     webPreferences: {
       preload: path.join(process.cwd(), 'preload.mjs'),
       contextIsolation: true,
@@ -51,7 +51,7 @@ async function createWindow() {
     }
   });
 
-  const startUrl = url.pathToFileURL(path.join(process.cwd(), 'index.html')).href;
+  const startUrl = url.pathToFileURL(path.join(process.cwd(), 'dist', 'index.html')).href;
   await mainWindow.loadURL(startUrl);
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
@@ -69,7 +69,7 @@ async function createWindow() {
       ]
     }] : []),
     {
-      label: 'File',
+      label: '&File',
       submenu: [
         { label: 'New', accelerator: 'CmdOrCtrl+N', click: () => mainWindow.webContents.send('action:new') },
         { label: 'Open…', accelerator: 'CmdOrCtrl+O', click: () => mainWindow.webContents.send('action:open') },
@@ -77,11 +77,13 @@ async function createWindow() {
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('action:save') },
         { label: 'Save As…', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow.webContents.send('action:saveAs') },
         { type: 'separator' },
-        isMac ? { role: 'close' } : { role: 'quit' }
+        { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: () => mainWindow.webContents.send('action:settings') },
+        { type: 'separator' },
+        isMac ? { role: 'close' } : { label: 'Exit', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
       ]
     },
     {
-      label: 'Edit',
+      label: '&Edit',
       submenu: [
         { role: 'undo' }, { role: 'redo' },
         { type: 'separator' },
@@ -98,22 +100,13 @@ async function createWindow() {
       ]
     },
     {
-      label: 'View',
+      label: '&View',
       submenu: [
         { role: 'reload' }, { role: 'forceReload' }, { role: 'toggleDevTools' },
         { type: 'separator' },
         { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' },
         { type: 'separator' },
         { role: 'togglefullscreen' }
-      ]
-    },
-    {
-      label: 'Crypto',
-      submenu: [
-        { label: 'Encrypt', accelerator: 'CmdOrCtrl+E', click: () => mainWindow.webContents.send('action:encrypt') },
-        { label: 'Decrypt', accelerator: 'CmdOrCtrl+D', click: () => mainWindow.webContents.send('action:decrypt') },
-        { type: 'separator' },
-        { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: () => mainWindow.webContents.send('action:settings') }
       ]
     },
     {
